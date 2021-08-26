@@ -45,22 +45,14 @@ class MarkOutput(object):
                     break
             
             marked_tensor_val_info = helper.make_tensor_value_info(marked_tensor_name, 0, None)
-            marked_tensor_val_info.type.tensor_type.ClearField("elem_type")
+            marked_tensor_val_info.ClearField("type")
+            # marked_tensor_val_info.type.tensor_type.ClearField("elem_type")
                 
             self.model.graph.output.append(marked_tensor_val_info)
         
         return self.model
 
 
-if __name__ == "__main__":
-    onnx_model_path = "D:\\src\\onnx-model-shapes\\models\\resnet101-v1-7.onnx"
-    onnx_model = onnx.load(onnx_model_path)
-
-    marked_tensor_names = ["resnetv18_stage3_relu0_fwd"]
-
-    mark_onnx_model_output = MarkOutput(onnx_model, marked_tensor_names)
-
-    onnx.save(mark_onnx_model_output.mark_output(), "marked_resnet101.onnx")
 
 
 

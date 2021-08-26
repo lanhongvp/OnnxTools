@@ -12,12 +12,31 @@ class InputCollection(object):
     def __init__(self, onnx_model, input_sym_values = None) -> None:
         super().__init__()
         self.onnx_model = onnx_model
-        self.input_sym_values = input_sym_values if input_sym_values is not None else {}
+        self.input_sym_values = self._convert2dict_(input_sym_values) if input_sym_values is not None else {}
 
+    def _convert2dict_(self, input_sym_values):
+        input_sym_val_dict = {}
+        input_sym_items = input_sym_values.strip().split(",")
+
+        for input_sym_item in input_sym_items:
+            input_sym_key = input_sym_item.split('=')[0]
+            input_sym_val = input_sym_item.split('=')[-1]
+
+            if input_sym_key in input_sym_val_dict.keys():
+                raise Exception("Key {} already existed, check your input".format(input_sym_key))
+    
+            input_sym_val_dict[input_sym_key] = int(input_sym_val)
+        
+        if len(input_sym_val_dict) != len(input_sym_items):
+            raise Exception("Different count between dict len {} with input symbol len {}, please check your input".format(len(input_sym_val_dict), len(input_sym_items)))
+        
+        print("Parse done", input_sym_val_dict)
+        return input_sym_val_dict
+    
     def read_data_from_disk(self, input_file_list):
         pass
 
-    def gen_random_data(self):
+    def gen_random_data(self, randint_max=100):
         model_inputs = self.onnx_model.graph.input
         # get all initializer names
         model_initializer_names = [x.name for x in self.onnx_model.graph.initializer]
@@ -50,7 +69,7 @@ class InputCollection(object):
                     model_input_random_data = numpy.random.random(input_tensor_shape).astype(input_tensor_numpy_type)
 
                 if input_tensor_numpy_type in [numpy.int32, numpy.int64]:
-                    model_input_random_data = numpy.random.randint(0, None, input_tensor_shape).astype(input_tensor_numpy_type)
+                    model_input_random_data = numpy.random.randint(0, randint_max, input_tensor_shape).astype(input_tensor_numpy_type)
                 
                 if input_tensor_numpy_type in [bool]:
                     model_input_random_data = numpy.random.random(input_tensor_shape) > 0.5
@@ -60,7 +79,7 @@ class InputCollection(object):
         return input_feed
 
 if __name__ == "__main__":
-    onnx_model_path = "D:\\src\\onnx-model-shapes\\models\\resnet101-v1-7.onnx"
+    onnx_model_path = "..\\models\\DeepThinkV5.onnx"
     onnx_model = onnx.load(onnx_model_path)
 
     input_collection = InputCollection(onnx_model)
