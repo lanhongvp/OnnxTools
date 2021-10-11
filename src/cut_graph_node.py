@@ -1,3 +1,4 @@
+import argparse
 import onnx
 import numpy
 import os
@@ -7,11 +8,16 @@ import get_val_info
 from onnx import helper
 
 numpy2elem = {
-    numpy.float32 : 1,
-    numpy.int32 : 6,
-    numpy.int64 : 7,
+    numpy.dtype('float32') : 1,
+    numpy.dtype('int32') : 6,
+    numpy.dtype('int64') : 7,
     bool : 9
 }
+
+cmdline = argparse.ArgumentParser(description='Load a onnx model, cut its submodel thru node list.')
+cmdline.add_argument('--inputmodel', '-im', help='path to input tensor model checkpoint to load from.', required=True)
+cmdline.add_argument('--cutnodelist', '-cn', help='node list to cut.', required=True)
+cmdline.add_argument('--cutmodel', '-cm', help='path where the exported model will be saved at.', required=True)
 
 class CutGraphNode(object):
     def __init__(self, onnx_model_path, cut_node_list, cutmodel_path):
@@ -83,8 +89,8 @@ class CutGraphNode(object):
             input_sys_val = "None=1"
             input_names = self.sub_graph_missing_val_info_names
             output_model = "..\\models\\marked_model.onnx"
-            get_miss_val_info = get_val_info.TensorValInfo(input_model, input_sys_val, input_names, output_model)
-            missing_val_info = get_miss_val_info.get_value_info()
+            get_miss_val_info = get_val_info.TensorValInfo(input_sys_val, input_names, output_model)
+            missing_val_info = get_miss_val_info.get_value_info(input_model)
             self._fill_in_missing_val_info(missing_val_info)
     
     def _fill_in_missing_val_info(self, missing_val_info):
@@ -93,21 +99,20 @@ class CutGraphNode(object):
                 if data.dtype in numpy2elem.keys():
                     elem_type = numpy2elem[data.dtype]
                 else:
-                    raise Exception("{} Un supported data type".format(data.dtype))
+                    raise Exception("{} Unsupported data type".format(data.dtype))
 
                 self.sub_graph_edges[name].value_info = helper.make_tensor_value_info(name, elem_type, data.shape)
 
     def create_subgraph(self):
-
         self._collect_subgraph_info()
         # Get node list
-        subgraph_nodes = [node for node in self.sub_graph_nodes.values()]
+        subgraph_nodes = [node.node for node in self.sub_graph_nodes.values()]
         # Get input value_info
-        subgraph_inputs = [self.sub_graph_edges[input] for input in self.sub_graph_inputs]
+        subgraph_inputs = [self.sub_graph_edges[input].value_info for input in self.sub_graph_inputs]
         # Get output value_info
-        subgraph_outputs = [self.sub_graph_edges[output] for output in self.sub_graph_outputs]
+        subgraph_outputs = [self.sub_graph_edges[output].value_info for output in self.sub_graph_outputs]
         # Get output value_info
-        subgraph_initializers = [self.sub_graph_edges[ini] for ini in self.sub_graph_initializers]
+        subgraph_initializers = [self.sub_graph_edges[ini].value_info for ini in self.sub_graph_initializers]
 
         cut_subgraph = helper.make_graph(subgraph_nodes, "cut_submodel", subgraph_inputs, subgraph_outputs, subgraph_initializers)
         cut_submodel = helper.make_model(cut_subgraph)
@@ -124,9 +129,10 @@ class CutGraphNode(object):
 
 
 if __name__ == "__main__":
-    onnx_model_path = ""
-    cut_node_list = ""
-    cutmodel_path = ""
+    onnx_model_path = "..\\models\\yolov2.onnx"
+    cut_node_list = ["pooling", "convolution1"]
+    cutmodel_path = "..\\models\\yolov2_cut.onnx"
 
-    cutgraph = CutGraphNode(onnx_model_path, cut_node_list, cutmodel_path)
+    args =  cmdline.parse_args()
+    cutgraph = CutGraphNode(args.inputmodel, args.cutnodelist, args.cutmodel)
     cutgraph.create_subgraph()

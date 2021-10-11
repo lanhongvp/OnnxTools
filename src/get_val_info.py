@@ -3,6 +3,7 @@ import mark_output
 import ort_inference
 import argparse
 import onnx
+import os
 import json
 
 cmdline = argparse.ArgumentParser(description='Load a onnx model, inference its unkonwn shapes.')
@@ -14,15 +15,16 @@ cmdline.add_argument('--randintmax', '-imax', help='random int max for random da
 
 
 class TensorValInfo(object):
-    def __init__(self, input_model, input_symvals, input_names, output_model) -> None:
+    def __init__(self, input_symvals, input_names, output_model) -> None:
         super().__init__()
-        self.input_model = input_model
         self.input_symvals = input_symvals
         self.input_names = input_names
         self.output_model = output_model
 
-    def get_value_info(self):
-        onnx_model = onnx.load(self.inputmodel)
+    def get_value_info(self, input_model):
+        print("input model ", input_model)
+
+        onnx_model = onnx.load(input_model)
         input_sym_values = self.input_symvals
         tensor_names = self.input_names
 
