@@ -6,6 +6,7 @@ class OrtInference(object):
         super().__init__()
         self.onnx_model = onnx_model
         self.input_feed = input_feed
+        self.output_tensors = []
         
     def _save_output_model(self, save_path):
         # onnx.checker.check_model(self.onnx_model)
@@ -14,6 +15,7 @@ class OrtInference(object):
     def _print_marked_tensor_shapes(self, tensor_names, ort_outputs):
         for tensor_name in tensor_names:
             idx = tensor_names.index(tensor_name)
+            self.output_tensors.append((tensor_name, ort_outputs[idx]))
             print("----- Marked tensor {}, Shape {} ------".format(tensor_name, ort_outputs[idx].shape))
 
     def ort_inference(self, save_path, tensor_names):
@@ -26,4 +28,5 @@ class OrtInference(object):
         ort_outputs = ort_session.run(tensor_names, self.input_feed)
 
         self._print_marked_tensor_shapes(tensor_names, ort_outputs)
+        return self.output_tensors
     
